@@ -1,14 +1,3 @@
 # Nemabiome_new
-Nemabiome validation study, comparing cut offs for reads, primers, pooling methods 
 
-The fastaq files can be found in this link: https://www.dropbox.com/scl/fo/hcj3uy5wrzjnkxlhcj8o5/h?dl=0&rlkey=5vblghon690x9ghp34o93xofs NOTE: must check if that link contains all files as I have run out of space on it despite deleting other folders. NOTE: reference sequences available in Nema_ref_ver3_at.fas.
-
-Data was processed in the DADA2 pipeline in the NEMA.Rmd file, they were then assigned taxonomy in the manual assignment.Rmd file. This was then used to construct the Nemabiome_Raw_Masterfile.xlsx file which contains all the basic data. This file was used to creaste Nemabiome-refined.xlsx.
-
-After assigning taxonomy to the sequences the ASVs were merged based on species in the Merged column.Rmd file. They were then copied and pasted into the excel file (Nemabiome-refined)
-
-Will add things, as they become completed- this is to avoid mess in the coding etc. 
-
-Then analysed the bioinformatic pooling in the bioinformatic pooling branch.
-
-More to come
+Bioinformatically pooled whereby we compared Bioinformatic pooling of one replicate (all replicates added, with no extra processing). 2 replicate pooling is when all replicates are added and the data is removed if only 1 replicate detected the species/ ASV. Data that is removed is replaced with a zero. 3 replicate pooling is when all replicates are added and the data is removed if only 1 or 2 replicates detected the species/ASV. Data that is removed is replaced with a zero

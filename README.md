@@ -8,3 +8,7 @@ Data was processed in the DADA2 pipeline in the NEMA.Rmd file, they were then as
 After assigning taxonomy to the sequences the ASVs were merged based on species in the Merged column.Rmd file. They were then copied and pasted into the excel file (Nemabiome-refined)
 
 Will add things, as they become completed- this is to avoid mess in the coding etc. 
+
+Then analysed the bioinformatic pooling in the bioinformatic pooling branch.
+
+More to come

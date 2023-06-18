@@ -1,0 +1,89 @@
+library(janitor)
+
+data <- read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/all_ASVs_pooled.xlsx", sheet="raw")
+
+head(data)
+
+data2<-adorn_percentages(data, denominator="col", na.rm=TRUE)
+
+head(data2)
+
+data2[data2 <= 0.0005] <- 0
+
+pc<-adorn_percentages(data2, denominator="col", na.rm=TRUE)
+
+#####################################
+
+View(pc)
+
+write.csv(pc, file="0.05%_cut_off_nemabiome_new.csv")
+
+#####################################
+# now for 0.5% cut off
+#####################################
+data <- read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/all_ASVs_pooled.xlsx", sheet="raw")
+
+head(data)
+
+data2<-adorn_percentages(data, denominator="col", na.rm=TRUE)
+
+head(data2)
+
+data2[data2 <= 0.005] <- 0
+
+pc<-adorn_percentages(data2, denominator="col", na.rm=TRUE)
+
+#####################################
+
+View(pc)
+
+write.csv(pc, file="0.5%_cut_off_nemabiome_new.csv")
+
+#######################
+#1% cut off
+#######################
+
+data <- read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/all_ASVs_pooled.xlsx", sheet="raw")
+
+head(data)
+
+data2<-adorn_percentages(data, denominator="col", na.rm=TRUE)
+
+head(data2)
+
+data2[data2 <= 0.01] <- 0
+
+pc<-adorn_percentages(data2, denominator="col", na.rm=TRUE)
+
+#####################################
+
+View(pc)
+
+write.csv(pc, file="1%_cut_off_nemabiome_new.csv")
+
+#######################
+#2% cut off
+#######################
+
+data <- read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/all_ASVs_pooled.xlsx", sheet="raw")
+
+head(data)
+
+data2<-adorn_percentages(data, denominator="col", na.rm=TRUE)
+
+head(data2)
+
+data2[data2 <= 0.02] <- 0
+
+pc<-adorn_percentages(data2, denominator="col", na.rm=TRUE)
+
+#####################################
+
+View(pc)
+
+write.csv(pc, file="2%_cut_off_nemabiome_new.csv")
+
+citation("vegan")
+
+version$version.string
+

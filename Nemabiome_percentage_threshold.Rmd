@@ -1,0 +1,439 @@
+library(readxl)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(vegan)
+library(tidyverse)
+library(ggforce)
+library(plyr)
+library("ggVennDiagram")
+
+#first for ASVs- raw
+pooling_all<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/all_ASVs_pooled.xlsx", sheet="Master", col_names=TRUE)
+str(pooling_all)
+head(pooling_all)
+
+# now for ASV level anosim
+com = pooling_all[,4:ncol(pooling_all)]
+head(com)
+
+df_com<-as.data.frame(com)
+
+#first is BC PERMANOVA
+BC<-vegdist(df_com, method="bray")
+
+adonis2(BC ~ Cow + Primer + Pooling.method, pooling_all, perm=200)
+
+# now for Jaccard 
+Jaccard<-vegdist(df_com, method="jaccard")
+
+adonis2(Jaccard ~ Cow + Primer + Pooling.method, pooling_all, perm=200)
+
+# now onto merging them into species 
+pooling_all_merging<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/all_ASVs_pooled.xlsx", sheet="Master", col_names=TRUE, .name_repair="minimal")
+str(pooling_all_merging) 
+head(pooling_all_merging)
+
+Merging_df<-as.data.frame(pooling_all_merging)
+
+Merging_df
+
+df<-as.data.frame(lapply(split.default(Merging_df, names(Merging_df)), function(x) Reduce(`+`, x)))
+
+head(df)
+
+write.xlsx(df, "merged ASVs all.xlsx")
+
+# this is the merged dataset
+pooling_all_merged<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/merged ASVs all.xlsx")
+
+data_long_all<- gather(pooling_all_merged, Nematodes, Abundance, Cooperia.oncophora:Trichostrongylus.axei, factor_key=TRUE)
+data_long_all
+
+data_long_all$Pooling.method <- factor(data_long_all$Pooling.method, levels = c("P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9", "P10", "P11", "P12", "P13", "P14", "P15", "P16"))
+
+tail(data_long_all)
+
+ggplot(data_long_all, aes(fill = Nematodes, y = Abundance, x=factor(Pooling.method))) + theme(panel.background = element_blank(), strip.background = element_blank(),
+        strip.placement='outside',  axis.text.x=element_blank(), axis.ticks.x=element_blank())+
+   facet_grid(Primer~ Pooling.method, scales= "free", space="free") + geom_bar(position="fill", stat = "identity") +
+  theme(axis.title.y = element_text(size = 8, face = "bold"), legend.title = element_text(size = 8, face = "bold"), 
+        legend.text = element_text(size = 8, face = "bold", colour = "black"), 
+        axis.text.y = element_text(colour = "black", size = 6, face = "bold")) + 
+  scale_y_continuous(expand = c(0,0)) + 
+  labs(x = "", y = "Relative Abundance (%)", fill = "Species") +
+  theme(
+        legend.box = "horizontal",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        legend.position="bottom") 
+
+com2 = pooling_all_merged[,4:ncol(pooling_all_merged)]
+head(com2)
+
+df_com2<-as.data.frame(com2)
+
+#first is BC PERMANOVA
+BC2<-vegdist(df_com2, method="bray")
+
+adonis2(BC2 ~ Cow + Primer + Pooling.method, pooling_all, perm=200)
+
+#############
+#now for 0.05% cut off
+pooling_0.05<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/0.05%_cut_off_nemabiome.xlsx", sheet="Sheet1", col_names=TRUE)
+str(pooling_0.05)
+head(pooling_0.05)
+
+com_0.05 = pooling_0.05[,4:ncol(pooling_0.05)]
+head(com_0.05)
+
+df_com_0.05<-as.data.frame(com_0.05)
+
+#first is BC PERMANOVA
+BC3<-vegdist(df_com_0.05, method="bray")
+
+adonis2(BC3 ~ Cow + Primer + Pooling.method, pooling_0.05, perm=200)
+
+Jaccard3<-vegdist(df_com_0.05, method="jaccard")
+
+adonis2(Jaccard3 ~ Cow + Primer + Pooling.method, pooling_0.05, perm=200)
+
+# now to see if we can remove the ASVs with no reads:
+pooling_0.05<- select(pooling_0.05, where(~ any(. != 0)))
+head(pooling_0.05)
+
+# now to write it into a excel file to see how many ASVs remain
+write.csv(pooling_0.05, "0.05% cut off ASVs count.csv")
+
+#################
+# merged using the steps above (just deleted it to streamline the file)
+
+# now for the merged 0.05% cut off
+pooling_0.05_merged<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/merged ASVs 0.05.xlsx")
+head(pooling_0.05_merged)
+
+data_long2<- gather(pooling_0.05_merged, Nematodes, Abundance, Cooperia.oncophora:Trichostrongylus.axei, factor_key=TRUE)
+data_long2
+
+data_long2$Pooling.method <- factor(data_long2$Pooling.method, levels = c("P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9", "P10", "P11", "P12", "P13", "P14", "P15", "P16"))
+
+tail(data_long2)
+
+ggplot(data_long2, aes(fill = Nematodes, y = Abundance, x=factor(Pooling.method))) + theme(panel.background = element_blank(), strip.background = element_blank(),
+        strip.placement='outside',  axis.text.x=element_blank(), axis.ticks.x=element_blank())+
+   facet_grid(Primer~ Pooling.method, scales= "free", space="free") + geom_bar(position="fill", stat = "identity") +
+  theme(axis.title.y = element_text(size = 8, face = "bold"), legend.title = element_text(size = 8, face = "bold"), 
+        legend.text = element_text(size = 8, face = "bold", colour = "black"), 
+        axis.text.y = element_text(colour = "black", size = 6, face = "bold")) + 
+  scale_y_continuous(expand = c(0,0)) + 
+  labs(x = "", y = "Relative Abundance (%)", fill = "Species") +
+  theme(
+        legend.box = "horizontal",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        legend.position="bottom") 
+
+###############################
+# now for the 0.5% cut off 
+###############################
+pooling_0.5<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/0.5%_cut_off_nemabiome.xlsx", sheet="Sheet1", col_names=TRUE)
+str(pooling_0.5)
+head(pooling_0.5)
+
+com_0.5 = pooling_0.5[,4:ncol(pooling_0.5)]
+head(com_0.5)
+
+df_com_0.5<-as.data.frame(com_0.5)
+
+#first is BC PERMANOVA
+BC4<-vegdist(df_com_0.5, method="bray")
+
+adonis2(BC4 ~ Cow + Primer + Pooling.method, pooling_0.5, perm=200)
+
+Jaccard4<-vegdist(df_com_0.5, method="jaccard")
+
+adonis2(Jaccard4 ~ Cow + Primer + Pooling.method, pooling_0.5, perm=200)
+
+# now to see if we can remove the ASVs with no reads:
+pooling_0.5<- select(pooling_0.5, where(~ any(. != 0)))
+head(pooling_0.5)
+
+# now to write it into a excel file to see how many ASVs remain
+write.csv(pooling_0.5, "0.5% cut off ASVs count.csv")
+
+###################
+# merging the dataframes now
+pooling_0.5<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/0.5%_cut_off_nemabiome.xlsx", sheet="Sheet1", col_names=TRUE, .name_repair="minimal")
+str(pooling_0.5)
+head(pooling_0.5)
+
+Merging_df<-as.data.frame(pooling_0.5)
+
+df<-as.data.frame(lapply(split.default(Merging_df, names(Merging_df)), function(x) Reduce(`+`, x)))
+
+head(df)
+
+write.csv(df, "merged ASVs 0.5.csv")
+
+# now for the merged 0.5% cut off
+pooling_0.5_merged<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/merged ASVs 0.5.xlsx")
+
+data_long3<- gather(pooling_0.5_merged, Nematodes, Abundance, Cooperia.oncophora:Trichostrongylus.axei, factor_key=TRUE)
+data_long3
+
+tail(data_long3)
+
+data_long3$Pooling.method <- factor(data_long3$Pooling.method, levels = c("P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9", "P10", "P11", "P12", "P13", "P14", "P15", "P16"))
+
+ggplot(data_long3, aes(fill = Nematodes, y = Abundance, x=factor(Pooling.method))) + theme(panel.background = element_blank(), strip.background = element_blank(),
+        strip.placement='outside',  axis.text.x=element_blank(), axis.ticks.x=element_blank())+
+   facet_grid(Primer~ Pooling.method, scales= "free", space="free") + geom_bar(position="fill", stat = "identity") +
+  theme(axis.title.y = element_text(size = 8, face = "bold"), legend.title = element_text(size = 8, face = "bold"), 
+        legend.text = element_text(size = 8, face = "bold", colour = "black"), 
+        axis.text.y = element_text(colour = "black", size = 6, face = "bold")) + 
+  scale_y_continuous(expand = c(0,0)) + 
+  labs(x = "", y = "Relative Abundance (%)", fill = "Species") +
+  theme(
+        legend.box = "horizontal",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        legend.position="bottom") 
+
+###############################
+# now for the 1% cut off 
+###############################
+pooling_1<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/1%_cut_off_nemabiome.xlsx", sheet="Sheet1", col_names=TRUE)
+str(pooling_1)
+head(pooling_1)
+
+com_1 = pooling_1[,4:ncol(pooling_1)]
+head(com_1)
+
+df_com_1<-as.data.frame(com_1)
+
+#first is BC PERMANOVA
+BC5<-vegdist(df_com_1, method="bray")
+
+adonis2(BC5 ~ Cow + Primer + Pooling.method, pooling_1, perm=200)
+
+Jaccard5<-vegdist(df_com_1, method="jaccard")
+
+adonis2(Jaccard5 ~ Cow + Primer + Pooling.method, pooling_1, perm=200)
+
+# now to see if we can remove the ASVs with no reads:
+pooling_1<- select(pooling_1, where(~ any(. != 0)))
+head(pooling_1)
+
+# now to write it into a excel file to see how many ASVs remain
+write.csv(pooling_1, "1% cut off ASVs count.csv")
+
+###################
+# merging the dataframes now
+pooling_1<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/1%_cut_off_nemabiome.xlsx", sheet="Sheet1", col_names=TRUE, .name_repair="minimal")
+str(pooling_1)
+head(pooling_1)
+
+Merging_df<-as.data.frame(pooling_1)
+
+df<-as.data.frame(lapply(split.default(Merging_df, names(Merging_df)), function(x) Reduce(`+`, x)))
+
+head(df)
+
+write.csv(df, "merged ASVs 1.csv")
+
+# now for the merged 1% cut off
+pooling_1_merged<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/merged ASVs 1.xlsx")
+
+data_long4<- gather(pooling_1_merged, Nematodes, Abundance, Cooperia.oncophora:Trichostrongylus.axei, factor_key=TRUE)
+data_long4
+
+tail(data_long4)
+
+data_long4$Pooling.method <- factor(data_long4$Pooling.method, levels = c("P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9", "P10", "P11", "P12", "P13", "P14", "P15", "P16"))
+
+ggplot(data_long4, aes(fill = Nematodes, y = Abundance, x=factor(Pooling.method))) + theme(panel.background = element_blank(), strip.background = element_blank(),
+        strip.placement='outside',  axis.text.x=element_blank(), axis.ticks.x=element_blank())+
+   facet_grid(Primer~ Pooling.method, scales= "free", space="free") + geom_bar(position="fill", stat = "identity") +
+  theme(axis.title.y = element_text(size = 8, face = "bold"), legend.title = element_text(size = 8, face = "bold"), 
+        legend.text = element_text(size = 8, face = "bold", colour = "black"), 
+        axis.text.y = element_text(colour = "black", size = 6, face = "bold")) + 
+  scale_y_continuous(expand = c(0,0)) + 
+  labs(x = "", y = "Relative Abundance (%)", fill = "Species") +
+  theme(
+        legend.box = "horizontal",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        legend.position="bottom") 
+
+###############################
+# now for the 2% cut off 
+###############################
+pooling_2<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/2%_cut_off_nemabiome.xlsx", sheet="Sheet1", col_names=TRUE)
+str(pooling_2)
+head(pooling_2)
+
+com_2 = pooling_2[,4:ncol(pooling_2)]
+head(com_2)
+
+df_com_2<-as.data.frame(com_2)
+
+#first is BC PERMANOVA
+BC6<-vegdist(df_com_2, method="bray")
+
+adonis2(BC6 ~ Cow + Primer + Pooling.method, pooling_2, perm=200)
+
+Jaccard6<-vegdist(df_com_2, method="jaccard")
+
+adonis2(Jaccard6 ~ Cow + Primer + Pooling.method, pooling_2, perm=200)
+
+# now to see if we can remove the ASVs with no reads:
+pooling_2<- select(pooling_2, where(~ any(. != 0)))
+head(pooling_2)
+
+# now to write it into a excel file to see how many ASVs remain
+write.csv(pooling_2, "2% cut off ASVs count.csv")
+
+###################
+# merging the dataframes now
+pooling_2<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/2%_cut_off_nemabiome.xlsx", sheet="Sheet1", col_names=TRUE, .name_repair="minimal")
+str(pooling_2)
+head(pooling_2)
+
+Merging_df<-as.data.frame(pooling_2)
+
+df<-as.data.frame(lapply(split.default(Merging_df, names(Merging_df)), function(x) Reduce(`+`, x)))
+
+head(df)
+
+write.csv(df, "merged ASVs 2.csv")
+
+# now for the merged 1% cut off
+pooling_2_merged<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/merged ASVs 2.xlsx")
+
+data_long5<- gather(pooling_2_merged, Nematodes, Abundance, Cooperia.oncophora:Trichostrongylus.axei, factor_key=TRUE)
+data_long5
+
+tail(data_long5)
+
+data_long5$Pooling.method <- factor(data_long5$Pooling.method, levels = c("P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9", "P10", "P11", "P12", "P13", "P14", "P15", "P16"))
+
+ggplot(data_long5, aes(fill = Nematodes, y = Abundance, x=factor(Pooling.method))) + theme(panel.background = element_blank(), strip.background = element_blank(),
+        strip.placement='outside',  axis.text.x=element_blank(), axis.ticks.x=element_blank())+
+   facet_grid(Primer~ Pooling.method, scales= "free", space="free") + geom_bar(position="fill", stat = "identity") +
+  theme(axis.title.y = element_text(size = 8, face = "bold"), legend.title = element_text(size = 8, face = "bold"), 
+        legend.text = element_text(size = 8, face = "bold", colour = "black"), 
+        axis.text.y = element_text(colour = "black", size = 6, face = "bold")) + 
+  scale_y_continuous(expand = c(0,0)) + 
+  labs(x = "", y = "Relative Abundance (%)", fill = "Species") +
+  theme(
+        legend.box = "horizontal",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        legend.position="bottom") 
+
+############################
+# comparing the different thresholds
+############################
+# first we convert the all ASVs into a percentage with janitor then we merge them below and copy and paste into a final excel sheet
+
+pooling_all_merging<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/all ASVs percentage for analysis.xlsx", col_names=TRUE, .name_repair="minimal")
+str(pooling_all_merging) 
+head(pooling_all_merging)
+
+Merging_df<-as.data.frame(pooling_all_merging)
+
+Merging_df
+
+df<-as.data.frame(lapply(split.default(Merging_df, names(Merging_df)), function(x) Reduce(`+`, x)))
+
+head(df)
+
+write.csv(df, "merged ASVs all as percentage.csv")
+
+# now for the final excel sheet 
+final<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/final_excel_thresholds.xlsx", col_names=TRUE, .name_repair="minimal")
+str(final) 
+head(final)
+
+final$Pooling.method<-as.factor(final$Pooling.method)
+final$Cow<-as.factor(final$Cow)
+final$Primer<-as.factor(final$Primer)
+final$Threshold<-as.factor(final$Threshold)
+
+com = final[,5:ncol(final)]
+head(com)
+
+m_com = as.matrix(com)
+head(m_com)
+
+# now we create our NMDS (set seed makes sure we get the same result every time):
+set.seed(123)
+nmds = metaMDS(m_com, distance = "bray")
+nmds
+# for a good representation on our data we are after a stress level of less than 0.2, if its zero then you might have an outlier thats very different to the other samples. # stress value of 0.0128...
+plot(nmds)
+
+# to plot it in ggplots2 we need to extract the NMDS coordinates for NMDS1 and NMDS2 axes, then put them into a new dataframe called "data.scores"
+#extract NMDS scores (x and y coordinates)
+data.scores = as.data.frame(scores(nmds)$ sites)
+
+data.scores$Cow = final$Cow
+data.scores$Primer = final$Primer
+data.scores$Threshold = final$Threshold
+data.scores$Pooling.method = final$Pooling.method
+
+data.scores$Primer<-as.factor(data.scores$Primer)
+data.scores$Cow<-as.factor(data.scores$Cow)
+data.scores$Threshold<-as.factor(data.scores$Threshold)
+data.scores$Pooling.method<-as.factor(data.scores$Pooling.method)
+
+xx = ggplot(data.scores, aes(x = NMDS1, y = NMDS2)) + 
+    geom_point(size = 3, aes(colour = Threshold), alpha=0.5)+
+    theme(axis.text.y = element_text(colour = "black", size = 12, face = "bold"), 
+    axis.text.x = element_text(colour = "black", face = "bold", size = 12), 
+    legend.text = element_text(size = 12, face ="bold", colour ="black"), 
+    legend.position = "right", axis.title.y = element_text(face = "bold", size = 14), 
+    axis.title.x = element_text(face = "bold", size = 14, colour = "black"), 
+    legend.title = element_text(size = 14, colour = "black", face = "bold"), 
+    panel.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1.2),
+    legend.key=element_blank()) + 
+    labs(x = "NMDS1", colour = "Threshold used", y = "NMDS2") + stat_ellipse(geom="path", aes(linetype=Cow), lwd=1)
+ 
+xx
+
+# now for jaccard
+set.seed(123)
+nmds = metaMDS(m_com, distance = "jaccard")
+nmds
+# for a good representation on our data we are after a stress level of less than 0.2, if its zero then you might have an outlier thats very different to the other samples. # stress value of 0.01318...
+
+plot(nmds)
+
+# to plot it in ggplots2 we need to extract the NMDS coordinates for NMDS1 and NMDS2 axes, then put them into a new dataframe called "data.scores"
+#extract NMDS scores (x and y coordinates)
+data.scores = as.data.frame(scores(nmds)$ sites)
+
+data.scores$Cow = final$Cow
+data.scores$Primer = final$Primer
+data.scores$Threshold = final$Threshold
+data.scores$Pooling.method = final$Pooling.method
+
+data.scores$Primer<-as.factor(data.scores$Primer)
+data.scores$Cow<-as.factor(data.scores$Cow)
+data.scores$Threshold<-as.factor(data.scores$Threshold)
+data.scores$Pooling.method<-as.factor(data.scores$Pooling.method)
+
+xx = ggplot(data.scores, aes(x = NMDS1, y = NMDS2)) + 
+    geom_point(size = 3, aes(colour = Threshold), alpha=0.5)+
+    theme(axis.text.y = element_text(colour = "black", size = 12, face = "bold"), 
+    axis.text.x = element_text(colour = "black", face = "bold", size = 12), 
+    legend.text = element_text(size = 12, face ="bold", colour ="black"), 
+    legend.position = "right", axis.title.y = element_text(face = "bold", size = 14), 
+    axis.title.x = element_text(face = "bold", size = 14, colour = "black"), 
+    legend.title = element_text(size = 14, colour = "black", face = "bold"), 
+    panel.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1.2),
+    legend.key=element_blank()) + 
+    labs(x = "NMDS1", colour = "Threshold used", y = "NMDS2") + stat_ellipse(geom="path", aes(linetype=Cow), lwd=1)
+ 
+xx
+

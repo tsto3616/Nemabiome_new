@@ -1,5 +1,7 @@
 # Nemabiome_new
 
+Note click on the read file to see nicer formatting- spaced out!
+
 Bioifnormatically pooling ASVs through 16 pooling methods. First 3 PCRs were performed and we pooled those PCRs through laboratory means and bioinformatic means. Pooling methods described below:
 
 P1= PCR1

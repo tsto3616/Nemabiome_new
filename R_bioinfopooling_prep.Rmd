@@ -1,0 +1,461 @@
+library(readxl)
+library(tidyr)
+library(ggplot2)
+library(dplyr)
+library(vegan)
+library(tidyverse)
+library(ggforce)
+library("openxlsx")
+library(plyr)
+
+#import the dataset (all ASVs), note the lab pooling is removed to simplify the pooling  code
+# note removed unidentified sequences
+All_ASVs<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/ASVs_raw_masterfiles.xlsx", sheet="All_minus_lab_pooling")
+head(All_ASVs)
+
+data_long<- gather(All_ASVs, Nematodes, Abundance, 4:74, factor_key=TRUE)
+data_long
+
+tail(data_long)
+
+#### now for bioinformatic pooling of 3 replicates- when the three PCR recations are added together and replaced with a zero if any of the 3 replicates return a zero 
+pc10<- data_long %>%
+  group_by(Cow, Primer, Nematodes) %>%
+  filter(sum(!is.na(Abundance) & Abundance > 0) >= 3) 
+
+pc10
+
+PC_sp10<- pc10 %>% select(Nematodes, Abundance)
+
+PC_sp10
+
+PC_sp10$Cow<-as.factor(PC_sp10$Cow)
+
+pc10<-merge(aggregate(Abundance ~ Nematodes+Cow+Primer, PC_sp10, sum), PC_sp10, all.x = T)
+
+pc10
+
+write.xlsx(pc10, "First_bioinfo_2.xlsx")
+
+# now to import it and change it to a wide format
+ten_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Documents/First_bioinfo_2.xlsx", col_names=TRUE)
+head(ten_bioinfo)
+
+pc_wide10<-xtabs(Abundance ~ Nematodes +Primer+Cow, data = ten_bioinfo)
+
+pc_wide10
+
+write.xlsx(pc_wide10, "Pooling method 10 wide format.xlsx")
+
+###################################### 
+# now for pooling method 9
+#### now for bioinformatic pooling of 3 replicates- when the three PCR recations are added together and replaced with a zero if 2 of the 3 replicates return a zero 
+pc9<- data_long %>%
+  group_by(Cow, Primer, Nematodes) %>%
+  filter(sum(!is.na(Abundance) & Abundance > 0) >= 2) 
+
+pc9
+
+PC_sp9<- pc9 %>% select(Nematodes, Abundance)
+
+PC_sp9
+
+PC_sp9$Cow<-as.factor(PC_sp9$Cow)
+
+pc9<-merge(aggregate(Abundance ~ Nematodes+Cow+Primer, PC_sp9, sum), PC_sp9, all.x = T)
+
+pc9
+
+write.xlsx(pc9, "Pooling method 9 long.xlsx")
+
+# now to import it and change it to a wide format
+nine_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Documents/Pooling method 9 long.xlsx", col_names=TRUE)
+head(nine_bioinfo)
+
+pc_wide9<-xtabs(Abundance ~ Nematodes +Primer+Cow, data = nine_bioinfo)
+
+pc_wide9
+
+write.xlsx(pc_wide9, "Pooling method 9 wide format.xlsx")
+
+###################################### 
+# now for pooling method 8
+#### now for bioinformatic pooling of 3 replicates- when the three PCR recations are added together 
+pc8<- data_long %>%
+  group_by(Cow, Primer, Nematodes)
+
+pc8
+
+PC_sp8<- pc8 %>% select(Nematodes, Abundance)
+
+PC_sp8
+
+PC_sp8$Cow<-as.factor(PC_sp8$Cow)
+
+pc8<-merge(aggregate(Abundance ~ Nematodes+Cow+Primer, PC_sp8, sum), PC_sp8, all.x = T)
+
+pc8
+
+write.xlsx(pc8, "Pooling method 8 long.xlsx")
+
+# now to import it and change it to a wide format
+eight_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Documents/Pooling method 8 long.xlsx", col_names=TRUE)
+head(eight_bioinfo)
+
+pc_wide8<-xtabs(Abundance ~ Nematodes +Primer+Cow, data = eight_bioinfo)
+
+pc_wide8
+
+write.xlsx(pc_wide8, "Pooling method 8 wide format.xlsx")
+
+###################################### 
+# now for pooling method 11
+#### now for bioinformatic pooling of PCR1 and 2 (additive), where total reads are added, no removal
+All_1and2<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/ASVs_raw_masterfiles.xlsx", sheet="1and2")
+head(All_1and2)
+
+data_long<- gather(All_1and2, Nematodes, Abundance, 4:74, factor_key=TRUE)
+data_long
+
+tail(data_long)
+
+pc11<- data_long %>%
+  group_by(Cow, Primer, Nematodes)
+
+pc11
+
+PC_sp11<- pc11 %>% select(Nematodes, Abundance)
+
+PC_sp11
+
+PC_sp11$Cow<-as.factor(PC_sp11$Cow)
+
+pc11<-merge(aggregate(Abundance ~ Nematodes+Cow+Primer, PC_sp11, sum), PC_sp11, all.x = T)
+
+pc11
+
+write.xlsx(pc11, "Pooling method 11 long.xlsx")
+
+# now to import it and change it to a wide format
+eleven_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Documents/Pooling method 11 long.xlsx", col_names=TRUE)
+head(eleven_bioinfo)
+
+pc_wide11<-xtabs(Abundance ~ Nematodes +Primer+Cow, data = eleven_bioinfo)
+
+pc_wide11
+
+write.xlsx(pc_wide11, "Pooling method 11 wide format.xlsx")
+
+###################################### 
+# now for pooling method 12
+#### now for bioinformatic pooling of PCR1 and 2 (subtractive), where total reads are added, and reads are removed if not present in both species
+pc12<- data_long %>%
+  group_by(Cow, Primer, Nematodes) %>%
+  filter(sum(!is.na(Abundance) & Abundance > 0) >= 2) 
+
+pc12
+
+PC_sp12<- pc12 %>% select(Nematodes, Abundance)
+
+PC_sp12
+
+PC_sp12$Cow<-as.factor(PC_sp12$Cow)
+
+pc12<-merge(aggregate(Abundance ~ Nematodes+Cow+Primer, PC_sp12, sum), PC_sp12, all.x = T)
+
+pc12
+
+write.xlsx(pc12, "Pooling method 12 long.xlsx")
+
+# now to import it and change it to a wide format
+twelve_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Documents/Pooling method 12 long.xlsx", col_names=TRUE)
+head(twelve_bioinfo)
+
+pc_wide12<-xtabs(Abundance ~ Nematodes +Primer+Cow, data = twelve_bioinfo)
+
+pc_wide12
+
+write.xlsx(pc_wide12, "Pooling method 12 wide format.xlsx")
+
+###################################### 
+# now for pooling method 13
+#### now for bioinformatic pooling of PCR1 and 3 (additive), where total reads are added, no removal
+All_1and3<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/ASVs_raw_masterfiles.xlsx", sheet="1and3")
+head(All_1and3)
+
+data_long<- gather(All_1and3, Nematodes, Abundance, 4:74, factor_key=TRUE)
+data_long
+
+tail(data_long)
+
+pc13<- data_long %>%
+  group_by(Cow, Primer, Nematodes)
+
+pc13
+
+PC_sp13<- pc13 %>% select(Nematodes, Abundance)
+
+PC_sp13
+
+PC_sp13$Cow<-as.factor(PC_sp13$Cow)
+
+pc13<-merge(aggregate(Abundance ~ Nematodes+Cow+Primer, PC_sp13, sum), PC_sp13, all.x = T)
+
+pc13
+
+write.xlsx(pc13, "Pooling method 13 long.xlsx")
+
+# now to import it and change it to a wide format
+thirteen_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Documents/Pooling method 13 long.xlsx", col_names=TRUE)
+head(thirteen_bioinfo)
+
+pc_wide13<-xtabs(Abundance ~ Nematodes +Primer+Cow, data = thirteen_bioinfo)
+
+pc_wide13
+
+write.xlsx(pc_wide13, "Pooling method 13 wide format.xlsx")
+
+###################################### 
+# now for pooling method 14
+#### now for bioinformatic pooling of PCR1 and 3 (subtractive), where total reads are added, and reads are removed if not present in both species
+pc14<- data_long %>%
+  group_by(Cow, Primer, Nematodes) %>%
+  filter(sum(!is.na(Abundance) & Abundance > 0) >= 2) 
+
+pc14
+
+PC_sp14<- pc14 %>% select(Nematodes, Abundance)
+
+PC_sp14
+
+PC_sp14$Cow<-as.factor(PC_sp14$Cow)
+
+pc14<-merge(aggregate(Abundance ~ Nematodes+Cow+Primer, PC_sp14, sum), PC_sp14, all.x = T)
+
+pc14
+
+write.xlsx(pc14, "Pooling method 14 long.xlsx")
+
+# now to import it and change it to a wide format
+forteen_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Documents/Pooling method 14 long.xlsx", col_names=TRUE)
+head(forteen_bioinfo)
+
+pc_wide14<-xtabs(Abundance ~ Nematodes +Primer+Cow, data = forteen_bioinfo)
+
+pc_wide14
+
+write.xlsx(pc_wide14, "Pooling method 14 wide format.xlsx")
+
+###################################### 
+# now for pooling method 15
+#### now for bioinformatic pooling of PCR2 and 3 (additive), where total reads are added, no removal
+All_2and3<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/ASVs_raw_masterfiles.xlsx", sheet="2and3")
+head(All_2and3)
+
+data_long<- gather(All_2and3, Nematodes, Abundance, 4:74, factor_key=TRUE)
+data_long
+
+tail(data_long)
+
+pc15<- data_long %>%
+  group_by(Cow, Primer, Nematodes)
+
+pc15
+
+PC_sp15<- pc15 %>% select(Nematodes, Abundance)
+
+PC_sp15
+
+PC_sp15$Cow<-as.factor(PC_sp15$Cow)
+
+pc15<-merge(aggregate(Abundance ~ Nematodes+Cow+Primer, PC_sp15, sum), PC_sp15, all.x = T)
+
+pc15
+
+write.xlsx(pc15, "Pooling method 15 long.xlsx")
+
+# now to import it and change it to a wide format
+fifthteen_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Documents/Pooling method 15 long.xlsx", col_names=TRUE)
+head(fifthteen_bioinfo)
+
+pc_wide15<-xtabs(Abundance ~ Nematodes +Primer+Cow, data = fifthteen_bioinfo)
+
+pc_wide15
+
+write.xlsx(pc_wide15, "Pooling method 15 wide format.xlsx")
+
+###################################### 
+# now for pooling method 16
+#### now for bioinformatic pooling of PCR2 and 3 (subtractive), where total reads are added, and reads are removed if not present in both species
+pc16<- data_long %>%
+  group_by(Cow, Primer, Nematodes) %>%
+  filter(sum(!is.na(Abundance) & Abundance > 0) >= 2) 
+
+pc16
+
+PC_sp16<- pc16 %>% select(Nematodes, Abundance)
+
+PC_sp16
+
+PC_sp16$Cow<-as.factor(PC_sp16$Cow)
+
+pc16<-merge(aggregate(Abundance ~ Nematodes+Cow+Primer, PC_sp16, sum), PC_sp16, all.x = T)
+
+pc16
+
+write.xlsx(pc16, "Pooling method 16 long.xlsx")
+
+# now to import it and change it to a wide format
+sixteen_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Documents/Pooling method 16 long.xlsx", col_names=TRUE)
+head(sixteen_bioinfo)
+
+pc_wide16<-xtabs(Abundance ~ Nematodes +Primer+Cow, data = sixteen_bioinfo)
+
+pc_wide16
+
+write.xlsx(pc_wide16, "Pooling method 16 wide format.xlsx")
+
+###################################### 
+# now for pooling method 1-7 (lab pooling and replicates)
+#### no bioinformatic pooling, JUST reformating then to make them matchup with the other datasets. This is JUST for replicates and lab pooling
+All_all<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/ASVs_raw_masterfiles.xlsx", sheet="All_all_pooling")
+head(All_all)
+
+data_long<- gather(All_all, Nematodes, Abundance, 4:74, factor_key=TRUE)
+data_long
+
+tail(data_long)
+
+pcall<- data_long %>%
+  group_by(Cow, Primer, "Pooling  method", Nematodes)
+
+pcall
+
+write.xlsx(pcall, "Pooling method all long.xlsx")
+
+# now to import it and change it to a wide format
+all_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Documents/Pooling method all long.xlsx", col_names=TRUE)
+head(all_bioinfo)
+
+pc_wide_all<-xtabs(Abundance ~ Nematodes +Primer+Cow+ Pooling, data = all_bioinfo)
+
+pc_wide_all
+
+write.xlsx(pc_wide_all, "Pooling method all (1-7) wide format.xlsx")
+
+#####################################
+# now for the merging of ALL the datasets above
+#####################################
+# transposed the data, added a primer and cow column
+# first we merge the 1-7 dataset with the 8 dataset and try and see if it worked
+# for some reason col_names doesnt work so added .name_repair=minimal which works 
+all_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/Scratch excel files (all) new/Pooling method all (1-7) wide format.xlsx", col_names=TRUE, .name_repair="minimal") 
+head(all_bioinfo)
+
+eight_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/Scratch excel files (all) new/Pooling method 8 wide format.xlsx", col_names=TRUE, .name_repair="minimal")
+head(eight_bioinfo)
+
+# extra coding is to convert NAs into zeros!
+merge1<- merge(all_bioinfo, eight_bioinfo, all.x=TRUE, all.y=TRUE, all=TRUE)
+merge1[is.na(merge1)]<-0
+
+merge1
+
+write.xlsx(merge1, "merge1.xlsx")
+
+#####################################################
+nine_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/Scratch excel files (all) new/Pooling method 9 wide format.xlsx", col_names=TRUE, .name_repair="minimal")
+head(nine_bioinfo)
+
+# extra coding is to convert NAs into zeros!
+merge2<- merge(merge1, nine_bioinfo, all.x=TRUE, all.y=TRUE, all=TRUE)
+merge2[is.na(merge2)]<-0
+
+merge2
+
+write.xlsx(merge2, "merge2.xlsx")
+
+#####################################################
+ten_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/Scratch excel files (all) new/Pooling method 10 wide format.xlsx", col_names=TRUE, .name_repair="minimal")
+head(ten_bioinfo)
+
+# extra coding is to convert NAs into zeros!
+merge3<- merge(merge2, ten_bioinfo, all.x=TRUE, all.y=TRUE, all=TRUE)
+merge3[is.na(merge3)]<-0
+
+merge3
+
+write.xlsx(merge3, "merge3.xlsx")
+
+#####################################################
+eleven_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/Scratch excel files (all) new/Pooling method 11 wide format.xlsx", col_names=TRUE, .name_repair="minimal")
+head(eleven_bioinfo)
+
+# extra coding is to convert NAs into zeros!
+merge4<- merge(merge3, eleven_bioinfo, all.x=TRUE, all.y=TRUE, all=TRUE)
+merge4[is.na(merge4)]<-0
+
+merge4
+
+write.xlsx(merge4, "merge4.xlsx")
+
+#####################################################
+twelve_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/Scratch excel files (all) new/Pooling method 12 wide format.xlsx", col_names=TRUE, .name_repair="minimal")
+head(twelve_bioinfo)
+
+# extra coding is to convert NAs into zeros!
+merge5<- merge(merge4, twelve_bioinfo, all.x=TRUE, all.y=TRUE, all=TRUE)
+merge5[is.na(merge5)]<-0
+
+merge5
+
+write.xlsx(merge5, "merge5.xlsx")
+
+#####################################################
+thirteen_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/Scratch excel files (all) new/Pooling method 13 wide format.xlsx", col_names=TRUE, .name_repair="minimal")
+head(thirteen_bioinfo)
+
+# extra coding is to convert NAs into zeros!
+merge6<- merge(merge5, thirteen_bioinfo, all.x=TRUE, all.y=TRUE, all=TRUE)
+merge6[is.na(merge6)]<-0
+
+merge6
+
+write.xlsx(merge6, "merge6.xlsx")
+
+#####################################################
+forteen_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/Scratch excel files (all) new/Pooling method 14 wide format.xlsx", col_names=TRUE, .name_repair="minimal")
+head(forteen_bioinfo)
+
+# extra coding is to convert NAs into zeros!
+merge7<- merge(merge6, forteen_bioinfo, all.x=TRUE, all.y=TRUE, all=TRUE)
+merge7[is.na(merge7)]<-0
+
+merge7
+
+write.xlsx(merge7, "merge7.xlsx")
+
+#####################################################
+fifthteen_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/Scratch excel files (all) new/Pooling method 15 wide format.xlsx", col_names=TRUE, .name_repair="minimal")
+head(fifthteen_bioinfo)
+
+# extra coding is to convert NAs into zeros!
+merge8<- merge(merge7, fifthteen_bioinfo, all.x=TRUE, all.y=TRUE, all=TRUE)
+merge8[is.na(merge8)]<-0
+
+merge8
+
+write.xlsx(merge8, "merge8.xlsx")
+
+#####################################################
+sixteen_bioinfo<-read_excel("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/Scratch excel files (all) new/Pooling method 16 wide format.xlsx", col_names=TRUE, .name_repair="minimal")
+head(sixteen_bioinfo)
+
+# extra coding is to convert NAs into zeros!
+merge9<- merge(merge8, sixteen_bioinfo, all.x=TRUE, all.y=TRUE)
+merge9[is.na(merge9)]<-0
+
+merge9
+
+write.xlsx(merge9, "merge9.xlsx")
+

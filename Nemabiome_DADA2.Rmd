@@ -1,0 +1,221 @@
+library(dada2)
+library(DECIPHER)
+packageVersion("DECIPHER")
+library(ShortRead)
+packageVersion("ShortRead") 
+library(Biostrings)
+packageVersion("Biostrings")
+library(ggplot2)
+packageVersion("ggplot2")
+library(stringr) # not strictly required but handy
+packageVersion("stringr")
+library(readr)
+packageVersion("readr")
+library("openxlsx")
+library(tidyverse)
+set.seed(106)
+
+path <- "C:/Users/tsto3616/Documents/Nemabiome_sequences"
+
+fwd_files <- sort(list.files(path, pattern = "R1", full.names = TRUE)) 
+rev_files <- sort(list.files(path, pattern = "R2", full.names = TRUE))
+
+# It's also handy to have a vector of sample names, which in this case is everything up 
+# until the first underscore, which is what our regular expression caputres.  You may
+# also create this manually if you don't have too many samples
+samples = str_extract(basename(fwd_files), "^[^_]+")
+
+
+names(fwd_files) <- samples
+names(rev_files) <- samples
+
+#NEMA1 Primers
+fwd_primer <- "ACGTCTGGTTCAGGGTTGTT"
+rev_primer <- "TTAGTTTCTTTTCCTCCGCT"
+fwd_primer_rev <- as.character(reverseComplement(DNAStringSet(fwd_primer)))
+rev_primer_rev <- as.character(reverseComplement(DNAStringSet(rev_primer)))
+
+# NEMA2 Primers 
+fwd_primer1 <- "ACGTCTGGTTCAGGGTTG"
+rev_primer1 <- "ATGCTTAAGTTCAGCGGGTA"
+fwd_primer_rev1 <- as.character(reverseComplement(DNAStringSet(fwd_primer1)))
+rev_primer_rev1 <- as.character(reverseComplement(DNAStringSet(rev_primer1)))
+
+# This function counts number of reads in which the primer is found
+count_primers <- function(primer, filename) {
+  num_hits <- vcountPattern(primer, sread(readFastq(filename)), fixed = FALSE)
+  return(sum(num_hits > 0))
+}
+
+count_primers(fwd_primer, fwd_files[[1]])
+
+count_primers(rev_primer1, rev_files[[1]])
+
+#NEMA2 fwd of 35915 count and rev of 32505
+
+cutadapt <- path.expand("C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/cutadapt.exe")
+
+# Make sure it works
+system2(cutadapt, args = "--version")
+# version 4.0
+
+# Create an output directory to store the clipped files
+cut_dir <- file.path(path, "cutadapt")
+if (!dir.exists(cut_dir)) dir.create(cut_dir)
+
+fwd_cut <- file.path(cut_dir, basename(fwd_files))
+rev_cut <- file.path(cut_dir, basename(rev_files))
+
+names(fwd_cut) <- samples
+names(rev_cut) <- samples
+
+# It's good practice to keep some log files so let's create some
+# file names that we can use for those 
+cut_logs <- path.expand(file.path(cut_dir, paste0(samples, ".log")))
+
+#cutadapt_args <- c("-g", fwd_primer, "-a", rev_primer_rev, 
+                   "-G", rev_primer, "-A", fwd_primer_rev,
+                   "-n", 2, "--discard-untrimmed")
+
+cutadapt_args1 <- c("-g", fwd_primer, "-a", rev_primer_rev1, 
+                   "-G", rev_primer1, "-A", fwd_primer_rev,
+                   "-n", 2, "--discard-untrimmed")
+                   
+# Loop over the list of files, running cutadapt on each file.  If you don't have a vector of sample names or 
+# don't want to keep the log files you can set stdout = "" to output to the console or stdout = NULL to discard
+# for (i in seq_along(fwd_files)) { system2(cutadapt, args = c(cutadapt_args, "-o", fwd_cut[i], "-p", rev_cut[i], fwd_files[i], rev_files[i]),stdout = cut_logs[i])  }
+
+for (i in seq_along(fwd_files)) {
+  system2(cutadapt, 
+          args = c(cutadapt_args1,
+                   "-o", fwd_cut[i], "-p", rev_cut[i], 
+                   fwd_files[i], rev_files[i]),
+          stdout = cut_logs[i])  }
+
+# quick check that we got something
+head(list.files(cut_dir))
+tail(list.files(cut_dir))
+
+dir(path="C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/Nemabiome_sequences/cutadapt")
+
+# this is to test if zero read lengths are responsible for the plotqualityprofile errors taking place... So our results is read lengths of 0... now to change the reads being checked to see if that's also a problem. Found that 1:2 had zero length but if we use 3:4 its fine... BUT these zero read lengths will infer problems as it messes with the analsys (apparently), so down the track need to include minLen for filterandtrim
+ShortRead::readFastq(fwd_cut[1:2])
+
+plotQualityProfile(fwd_cut[3:4]) + ggtitle("Forward")
+
+plotQualityProfile(rev_cut[3:4]) + ggtitle("Reverse")
+
+# Truncate to 200
+ # Same as for the clippling we create an output directory to store the filtered files
+filt_dir <- file.path(path, "filtered")
+if (!dir.exists(filt_dir)) dir.create(filt_dir)
+
+fwd_filt <- file.path(filt_dir, basename(fwd_files))
+rev_filt <- file.path(filt_dir, basename(rev_files))
+
+names(fwd_filt) <- samples
+names(rev_filt) <- samples
+
+#including minLen to eliminate the 0 read length reads
+filtered_out <- filterAndTrim(
+  fwd = fwd_cut, 
+  filt = fwd_filt,
+  rev = rev_cut,
+  filt.rev = rev_filt,
+  maxEE = c(2, 5), 
+  truncQ = 2, 
+  rm.phix = TRUE, 
+  compress = TRUE, 
+  multithread = FALSE, truncLen=c(200,200),
+  minLen=20 #default
+  )  
+
+head(filtered_out)
+
+err_fwd <- learnErrors(fwd_filt, multithread = FALSE)
+err_rev <- learnErrors(rev_filt, multithread = FALSE)
+
+plotErrors(err_fwd, nominalQ = TRUE)
+
+dada_fwd <- dada(fwd_filt, err = err_fwd, multithread = FALSE)
+dada_rev <- dada(rev_filt, err = err_rev, multithread = FALSE)
+
+mergers <- mergePairs(
+  dadaF = dada_fwd,
+  dadaR = dada_rev,
+  derepF = fwd_filt,
+  derepR = rev_filt,
+  maxMismatch = 1, 
+  verbose=TRUE)
+
+seqtab <- makeSequenceTable(mergers)
+dim(seqtab) 
+
+seqtab_nochim <- removeBimeraDenovo(seqtab, method = "consensus", multithread = FALSE, verbose = TRUE)
+dim(seqtab_nochim)
+
+table(nchar(getSequences(seqtab_nochim)))
+
+# small function to get the number of sequences
+getN <- function(x) sum(getUniques(x))
+
+track <- cbind(
+  filtered_out, 
+  sapply(dada_fwd, getN), 
+  sapply(dada_rev, getN), 
+  sapply(mergers, getN), 
+  rowSums(seqtab_nochim))
+  
+colnames(track) <- c("raw", "filtered", "denoised_fwd", "denoised_rev", "merged", "no_chim")
+rownames(track) <- samples  
+head(track)
+
+write.csv(track, file = "nemabiome_track.csv")
+
+write.csv(seqtab_nochim, file = "nemabiome_seqtabnochim.csv")
+
+TSeqTab <- as.data.frame(t(seqtab_nochim))
+TSeqTab$variant<-1:nrow(TSeqTab)
+write.csv(TSeqTab, file = "nemabiome.csv")
+
+Tseqtab_nochim<-read.csv("nemabiome_seqtabnochim.csv", row.names=1)
+Tseqtab_nochim<-as.matrix(Tseqtab_nochim)
+print(Tseqtab_nochim)
+
+rownames(Tseqtab_nochim) <- paste0("OTU", 1:nrow(Tseqtab_nochim))
+colnames(Tseqtab_nochim) <- paste0("Sample", 1:ncol(Tseqtab_nochim))
+Tseqtab_nochim
+
+Taxa <- assignTaxonomy(seqtab_nochim,"C:/Users/tsto3616/Downloads/NEMA_USYD_ITS2_Database_assignTax_v3.fa",taxLevels = c("Locus", "Genus", "Species", "Subsp/Strain"), verbose = TRUE, minBoot = 50, multithread=FALSE, tryRC=TRUE) #default for minBoot is 50
+print(Taxa)
+
+write.csv(Taxa, file = "maxBoot-test.csv", row.names = TRUE)
+unname(Taxa)
+
+Taxa<-read.csv("maxBoot-test.csv")
+
+tax.augmented <- data.frame(Taxa, t(seqtab_nochim), stringsAsFactors=FALSE)
+
+write.csv(tax.augmented, file="ASVs_raw_masterfiles.csv", row.names=TRUE)
+
+Species <- assignSpecies(seqtab_nochim, "C:/Users/tsto3616/OneDrive - The University of Sydney (Staff)/Desktop/Nemabiome/Usyd_as_ref.txt", tryRC=TRUE)
+
+Species
+
+write.csv(Species, file = "Spe-NEMA1.csv", row.names = TRUE)
+unname(Species)
+
+Species<-read_csv("Spe-NEMA1.csv")
+
+head(Species)
+
+seqtab<-read_csv("nemabiome_seqtabnochim.csv")
+
+head(seqtab)
+
+assigned_species<-full_join(Species, seqtab, by="Sequences")
+
+head(assigned_species)
+
+write.csv(assigned_species, file="Assigned_nemabiome_Species.csv", row.names=TRUE)
+
